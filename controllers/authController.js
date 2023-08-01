@@ -3,7 +3,7 @@ import { StatusCodes } from 'http-status-codes';
 import { BadRequestError, UnAuthenticatedError } from '../errors/index.js';
 import attachCookie from '../utils/attachCookie.js';
 const register = async (req, res) => {
-  const { name, email, password, countryName, experience, contact, prefferedJob} = req.body;
+  const { name, email, password } = req.body;
 
   if (!name || !email || !password) {
     throw new BadRequestError('please provide all values');
@@ -12,7 +12,7 @@ const register = async (req, res) => {
   if (userAlreadyExists) {
     throw new BadRequestError('Email already in use');
   }
-  const user = await User.create({ name, email, password, countryName, experience, contact, prefferedJob  });
+  const user = await User.create({ name, email, password });
 
   const token = user.createJWT();
   attachCookie({ res, token });
@@ -79,5 +79,29 @@ const logout = async (req, res) => {
   });
   res.status(StatusCodes.OK).json({ msg: 'user logged out!' });
 };
+const addEmployee = async (req, res) => {
+  const { name, email, password, countryName, experience, contact, prefferedJob} = req.body;
 
-export { register, login, updateUser, getCurrentUser, logout };
+  if (!name || !email || !password) {
+    throw new BadRequestError('please provide all values');
+  }
+  const employeeAlreadyExists = await Employee.findOne({ email });
+  if (employeeAlreadyExists) {
+    throw new BadRequestError('Email already in use');
+  }
+  const employee = await User.create({ name, email, password, countryName, experience, contact, prefferedJob  });
+
+  const token = employee.createJWT();
+  attachCookie({ res, token });
+  res.status(StatusCodes.CREATED).json({
+    user: {
+      email: employee.email,
+      lastName: employee.lastName,
+      location: employee.location,
+      name: employee.name
+    },
+
+    location: employee.location,
+  });
+};
+export { register, login, updateUser, getCurrentUser, logout, addEmployee };
