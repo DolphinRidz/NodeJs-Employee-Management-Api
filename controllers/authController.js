@@ -1,4 +1,6 @@
 import User from '../models/User.js';
+import Employee from '../models/Employee.js';
+
 import { StatusCodes } from 'http-status-codes';
 import { BadRequestError, UnAuthenticatedError } from '../errors/index.js';
 import attachCookie from '../utils/attachCookie.js';
@@ -79,22 +81,27 @@ const logout = async (req, res) => {
   });
   res.status(StatusCodes.OK).json({ msg: 'user logged out!' });
 };
+
+
+/***
+ * Add Job Api 
+ */
 const addEmployee = async (req, res) => {
   const { name, email, password, countryName, experience, contact, prefferedJob} = req.body;
 
   if (!name || !email || !password) {
-    throw new BadRequestError('please provide all values');
+    // throw new BadRequestError('please provide all values');
   }
   const employeeAlreadyExists = await Employee.findOne({ email });
   if (employeeAlreadyExists) {
     throw new BadRequestError('Email already in use');
   }
-  const employee = await User.create({ name, email, password, countryName, experience, contact, prefferedJob  });
+  const employee = await Employee.create({ name, email, password, countryName, experience, contact, prefferedJob  });
 
   const token = employee.createJWT();
   attachCookie({ res, token });
   res.status(StatusCodes.CREATED).json({
-    user: {
+    Employee: {
       email: employee.email,
       lastName: employee.lastName,
       location: employee.location,
@@ -104,4 +111,42 @@ const addEmployee = async (req, res) => {
     location: employee.location,
   });
 };
-export { register, login, updateUser, getCurrentUser, logout, addEmployee };
+
+
+
+const getAllEmployees = async (req, res) => {
+  const { status, jobType, sort, search } = req.query;
+
+  const queryObject = {
+    createdBy: req.user.userId,
+  };
+
+  if (search) {
+    queryObject.position = { $regex: search, $options: 'i' };
+  }
+  // NO AWAIT
+
+  let result = Job.find(queryObject);
+
+  // chain sort conditions
+
+    result = result.sort('-createdAt');
+
+
+  //
+
+  // setup pagination
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  result = result.skip(skip).limit(limit);
+
+  const jobs = await result;
+
+  const totalJobs = await Job.countDocuments(queryObject);
+  const numOfPages = Math.ceil(totalJobs / limit);
+
+  res.status(StatusCodes.OK).json({ jobs, totalJobs, numOfPages });
+};
+export { register, login, updateUser, getCurrentUser, logout, addEmployee ,getAllEmployees};

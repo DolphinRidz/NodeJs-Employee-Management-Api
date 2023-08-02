@@ -75,4 +75,4 @@ EmployeeSchema.methods.comparePassword = async function (candidatePassword) {
   return isMatch
 }
 
-export default mongoose.model('User', EmployeeSchema)
+export default mongoose.model('Employee', EmployeeSchema)
